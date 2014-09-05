@@ -1,0 +1,274 @@
+<!doctype html>
+<html>
+  <head>
+    <!-- MathJax -->
+    <script type="text/javascript"
+      src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>
+      Caffe | Layer Catalogue
+    </title>
+
+    <link rel="stylesheet" href="/stylesheets/reset.css">
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+    <link rel="stylesheet" href="/stylesheets/pygment_trac.css">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-46255508-1', 'daggerfs.com');
+    ga('send', 'pageview');
+  </script>
+    <div class="wrapper">
+      <header>
+        <h1 class="header"><a href="/">Caffe</a></h1>
+        <p class="header">
+          Deep learning framework developed by <a class="header name" href="http://daggerfs.com/">Yangqing Jia</a> / <a class="header name" href="http://bvlc.eecs.berkeley.edu/">BVLC</a>
+        </p>
+        <ul>
+          <li>
+            <a class="buttons github" href="https://github.com/BVLC/caffe">View On GitHub</a>
+          </li>
+        </ul>
+      </header>
+      <section>
+
+      <h1 id="layers">Layers</h1>
+
+<p>To create a Caffe model you need to define the model architecture in a protocol buffer definition file (prototxt).</p>
+
+<p>Caffe layers and their parameters are defined in the protocol buffer definitions for the project in <a href="https://github.com/BVLC/caffe/blob/master/src/caffe/proto/caffe.proto">caffe.proto</a>. The latest definitions are in the <a href="https://github.com/BVLC/caffe/blob/dev/src/caffe/proto/caffe.proto">dev caffe.proto</a>.</p>
+
+<p>TODO complete list of layers linking to headings</p>
+
+<h3 id="vision-layers">Vision Layers</h3>
+
+<ul>
+  <li>Header: <code>./include/caffe/vision_layers.hpp</code></li>
+</ul>
+
+<p>Vision layers usually take <em>images</em> as input and produce other <em>images</em> as output.
+A typical “image” in the real-world may have one color channel ($c = 1$), as in a grayscale image, or three color channels ($c = 3$) as in an RGB (red, green, blue) image.
+But in this context, the distinguishing characteristic of an image is its spatial structure: usually an image has some non-trivial height $h &gt; 1$ and width $w &gt; 1$.
+This 2D geometry naturally lends itself to certain decisions about how to process the input.
+In particular, most of the vision layers work by applying a particular operation to some region of the input to produce a corresponding region of the output.
+In contrast, other layers (with few exceptions) ignore the spatial structure of the input, treating it as “one big vector” with dimension <script type="math/tex"> c h w </script>.</p>
+
+<h4 id="convolution">Convolution</h4>
+
+<ul>
+  <li>LayerType: <code>CONVOLUTION</code></li>
+  <li>CPU implementation: <code>./src/caffe/layers/convolution_layer.cpp</code></li>
+  <li>CUDA GPU implementation: <code>./src/caffe/layers/convolution_layer.cu</code></li>
+  <li>Options (<code>ConvolutionParameter convolution_param</code>)
+    <ul>
+      <li>
+        <table>
+          <tbody>
+            <tr>
+              <td>Required</td>
+              <td><code>num_output</code> ($c_o$), the number of filters</td>
+            </tr>
+          </tbody>
+        </table>
+      </li>
+      <li>Required: <code>kernel_size</code> or (<code>kernel_h</code>, <code>kernel_w</code>), specifies height &amp; width of each filter</li>
+      <li>Strongly recommended (default <code>type: 'constant' value: 0</code>): <code>weight_filler</code></li>
+      <li>Optional (default <code>true</code>): <code>bias_term</code>, specifies whether to learn and apply a set of additive biases to the filter outputs</li>
+      <li>Optional (default 0): <code>pad</code> or (<code>pad_h</code>, <code>pad_w</code>), specifies the number of pixels to (implicitly) add to each side of the input</li>
+      <li>Optional (default 1): <code>stride</code> or (<code>stride_h</code>, <code>stride_w</code>), specifies the intervals at which to apply the filters to the input</li>
+      <li>Optional (default 1): <code>group</code> ($g$) if $&gt;1$, restricts the connectivity of each filter to a subset of the input.  In particular, the input to the $i^{th}$ group of $n_f / g$ filters is the $i^{th}$ group of $c_i / g$ input channels.</li>
+    </ul>
+  </li>
+  <li>Input
+    <ul>
+      <li>$n \times c_i \times h_i \times w_i$ (repeated $K \ge 1$ times)</li>
+    </ul>
+  </li>
+  <li>Output
+    <ul>
+      <li>$n \times c_o \times h_o \times w_o$ (repeated $K$ times)</li>
+    </ul>
+  </li>
+  <li>
+    <p>Sample (as seen in <code>./examples/imagenet/imagenet_train_val.prototxt</code>)</p>
+
+    <pre><code>  layers {
+    name: "conv1"
+    type: CONVOLUTION
+    bottom: "data"
+    top: "conv1"
+    blobs_lr: 1          # learning rate multiplier for the filters
+    blobs_lr: 2          # learning rate multiplier for the biases
+    weight_decay: 1      # weight decay multiplier for the filters
+    weight_decay: 0      # weight decay multiplier for the biases
+    convolution_param {
+      num_output: 96     # learn 96 filters
+      kernel_size: 11    # each filter is 11x11
+      stride: 4          # step 4 pixels between each filter application
+      weight_filler {
+        type: "gaussian" # initialize the filters from a Gaussian
+        std: 0.01        # distribution with stdev 0.01 (default mean: 0)
+      }
+      bias_filler {
+        type: "constant" # initialize the biases to zero (0)
+        value: 0
+      }
+    }
+  }
+</code></pre>
+  </li>
+</ul>
+
+<p>The <code>CONVOLUTION</code> layer convolves the input image with a set of learnable filters, each producing one feature map in the output image.</p>
+
+<h4 id="pooling">Pooling**</h4>
+
+<p><code>POOLING</code></p>
+
+<h4 id="local-response-normalization">Local Response Normalization</h4>
+
+<p><code>LRN</code></p>
+
+<h4 id="im2col">im2col</h4>
+
+<p><code>IM2COL</code> is a helper for doing the image-to-column transformation that you most likely do not need to know about.</p>
+
+<h3 id="loss-layers">Loss Layers</h3>
+
+<p>Loss drives learning by comparing an output to a target and assigning cost to minimize. The loss itself is computed by the forward pass and the gradient w.r.t. to the loss is computed by the backward pass.</p>
+
+<h4 id="softmax">Softmax</h4>
+
+<p><code>SOFTMAX_LOSS</code></p>
+
+<h4 id="sum-of-squares--euclidean">Sum-of-Squares / Euclidean</h4>
+
+<p><code>EUCLIDEAN_LOSS</code></p>
+
+<h4 id="hinge--margin">Hinge / Margin</h4>
+
+<p><code>HINGE_LOSS</code></p>
+
+<h4 id="sigmoid-cross-entropy">Sigmoid Cross-Entropy</h4>
+
+<p><code>SIGMOID_CROSS_ENTROPY_LOSS</code></p>
+
+<h4 id="infogain">Infogain</h4>
+
+<p><code>INFOGAIN_LOSS</code></p>
+
+<h4 id="accuracy-and-top-k">Accuracy and Top-k</h4>
+
+<p><code>ACCURACY</code> scores the output as the accuracy of output with respect to target – it is not actually a loss and has no backward step.</p>
+
+<h3 id="activation--neuron-layers">Activation / Neuron Layers</h3>
+
+<h4 id="relu--rectified-linear-and-leaky-relu">ReLU / Rectified-Linear and Leaky ReLU</h4>
+
+<p><code>RELU</code></p>
+
+<h4 id="sigmoid">Sigmoid</h4>
+
+<p><code>SIGMOID</code></p>
+
+<h4 id="tanh--hyperbolic-tangent">TanH / Hyperbolic Tangent</h4>
+
+<p><code>TANH</code></p>
+
+<h4 id="absolute-value">Absolute Value</h4>
+
+<p><code>ABSVAL</code></p>
+
+<h4 id="power">Power</h4>
+
+<p><code>POWER</code></p>
+
+<h4 id="bnll">BNLL</h4>
+
+<p><code>BNLL</code></p>
+
+<h3 id="data-layers">Data Layers</h3>
+
+<h4 id="database">Database</h4>
+
+<p><code>DATA</code></p>
+
+<h4 id="in-memory">In-Memory</h4>
+
+<p><code>MEMORY_DATA</code></p>
+
+<h4 id="hdf5-input">HDF5 Input</h4>
+
+<p><code>HDF5_DATA</code></p>
+
+<h4 id="hdf5-output">HDF5 Output</h4>
+
+<p><code>HDF5_OUTPUT</code></p>
+
+<h4 id="images">Images</h4>
+
+<p><code>IMAGE_DATA</code></p>
+
+<h4 id="windows">Windows</h4>
+
+<p><code>WINDOW_DATA</code></p>
+
+<h4 id="dummy">Dummy</h4>
+
+<p><code>DUMMY_DATA</code> is for development and debugging. See <code>DummyDataParameter</code>.</p>
+
+<h3 id="common-layers">Common Layers</h3>
+
+<h4 id="inner-product">Inner Product</h4>
+
+<p><code>INNER_PRODUCT</code></p>
+
+<h4 id="splitting">Splitting</h4>
+
+<p><code>SPLIT</code></p>
+
+<h4 id="flattening">Flattening</h4>
+
+<p><code>FLATTEN</code></p>
+
+<h4 id="concatenation">Concatenation</h4>
+
+<p><code>CONCAT</code></p>
+
+<h4 id="slicing">Slicing</h4>
+
+<p><code>SLICE</code></p>
+
+<h4 id="elementwise-operations">Elementwise Operations</h4>
+
+<p><code>ELTWISE</code></p>
+
+<h4 id="argmax">Argmax</h4>
+
+<p><code>ARGMAX</code></p>
+
+<h4 id="softmax-1">Softmax</h4>
+
+<p><code>SOFTMAX</code></p>
+
+<h4 id="mean-variance-normalization">Mean-Variance Normalization</h4>
+
+<p><code>MVN</code></p>
+
+
+      </section>
+  </div>
+  </body>
+</html>
